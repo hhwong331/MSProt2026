@@ -273,17 +273,15 @@ plotSpectra(sp2[-1])
  
 ## Focus of mz range
 ```{r}
-plotSpectra(sp[2807], xlim = c(521.2, 522.5))
-plotSpectra(sp[2807], xlim = c(521.3, 521.35))
+plotSpectra(sp[2807], xlim = c(521.2, 522.5)); grid()
+plotSpectra(sp[2807], xlim = c(521.3, 521.35)); grid()
 
 ## Processing of MS raw data as `profile mode of spectrum`
 ## that's because there is some uncertainty in all in what is measured by the MS (imperfection of device)
-
-plotSpectra(sp[2807], xlim = c(521.2, 522.5))
 ## `centroid mode of spectrum`
 Spectra::pickPeaks(sp[2807]) |>
     filterIntensity(1e7) |>
-    plotSpectra(xlim = c(521.25, 522.5))
+    plotSpectra(xlim = c(521.25, 522.5)); grid()
 
 ## Normally MS1 is produced as profile mode and MS2 as centroid mode when we convert them to mzML
 table(msLevel(sp), centroided(sp))
@@ -322,23 +320,11 @@ anyDuplicated(precursorMz(sp2))
 plotSpectra(sp2[i])
 
 
-plotSpectraMirror(sp2[31], sp2[37])
+plotSpectraMirror(sp2[31], sp2[37]); grid()
 
-plotSpectraOverlay(sp2[i], col = c("red", "steelblue"))
+plotSpectraOverlay(sp2[i], col = c("red", "steelblue")); grid()
 
 ```
-
-## Interactive visulization
-```{r, eval=FALSE}
-## BiocManager::install("RforMassSpectrometry/SpectraVis")
-
-library(SpectraVis)
-
-plotlySpectra(sp2[31])
-
-browseSpectra(sp)
-```
-
 
 ```{r, include=FALSE, echo=FALSE, eval=FALSE}
 ####################################################
