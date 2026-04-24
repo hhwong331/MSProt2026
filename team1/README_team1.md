@@ -1,4 +1,4 @@
-# Team 1: Jan, Yingjia, Rhiannon, Faezeh, Muskan
+# Team 1: Faezeh, Yingjia, Rhiannon, Muskan
 
 ## Capstone Project Folder
 
