@@ -14,7 +14,7 @@ University of Helsinki – Spring 2026
 
 Each team member should take responsibility for one or more of the following tasks:
 
-- **SDRF Maker**  (Aleksandra Poluianova)
+- **SDRF Maker**  (Aleksandra Poluianova) 
 
   Responsible for creating and validating the `SDRF.tsv` file according to required standards.
 
