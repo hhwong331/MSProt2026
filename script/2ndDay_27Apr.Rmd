@@ -364,6 +364,7 @@ plotSpectraOverlay(sp2[i], col = c("red", "steelblue")); grid()
 ```
 
 
+<<<<<<< Updated upstream
 ```{r, include=TRUE,  eval=FALSE}
 # BiocManager::install("RforMassSpectrometry/SpectraVis")
 library(SpectraVis)
@@ -372,6 +373,13 @@ plotlySpectra(sp2[37])
 
 browseSpectra(sp)
 
+=======
+```{r incomplete chunk}
+#BiocManager::install("RforMassSpectrometry/SpectraVis")
+library(SpectraVis)
+
+plotlySpectra(sp2[37])
+>>>>>>> Stashed changes
 ```
 
 ```{r, include=FALSE, echo=FALSE, eval=FALSE}

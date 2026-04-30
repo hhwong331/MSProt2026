@@ -2,8 +2,11 @@
 .Rhistory
 .RData
 .Ruserdata
+<<<<<<< Updated upstream
 script/1stDay_20Apr.Rmd
 script/1stDay_20Apr.Rmd
 script/1stDay_20Apr.Rmd
 script/2ndDay_27Apr.html
+=======
+>>>>>>> Stashed changes
 script/2ndDay_27Apr.Rmd
