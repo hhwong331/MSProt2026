@@ -11,33 +11,34 @@ Bioconductor packages tagged by "proteomics", n = 177 on Nov2024, n = 188 on 8th
 https://bioconductor.org/packages/release/BiocViews.html#___Proteomics
 
 ```{r setup, include=TRUE, echo=TRUE, eval=FALSE, message=FALSE}
+#shift command C to add # to chunks lines
 knitr::opts_chunk$set(echo = FALSE)
-## install.package("BiocManager")
+install.packages("BiocManager")
 
-# library(BiocManager)
-# 
-# # Bioconductor packages
-# if (!requireNamespace("BiocManager", quietly = TRUE))
-#     install.packages("BiocManager")
-# 
-# BiocManager::install("tidyverse")
-# BiocManager::install("factoextra")
-# BiocManager::install("msdata")
-# BiocManager::install("mzR")
-# BiocManager::install("rhdf5")
-# BiocManager::install("rpx")
-# BiocManager::install("MsCoreUtils")
-# BiocManager::install("QFeatures")
-# BiocManager::install("Spectra")
-# BiocManager::install("ProtGenerics")
-# BiocManager::install("PSMatch")
-# BiocManager::install("pheatmap")
-# BiocManager::install("limma")
-# BiocManager::install("MSnID")
-# BiocManager::install("rawrr")
-# BiocManager::install("RforMassSpectrometry/SpectraVis")
-# 
-# install.packages("tidyverse")
+library(BiocManager)
+
+# Bioconductor packages
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("tidyverse")
+BiocManager::install("factoextra")
+BiocManager::install("msdata")
+BiocManager::install("mzR")
+BiocManager::install("rhdf5")
+BiocManager::install("rpx")
+BiocManager::install("MsCoreUtils")
+BiocManager::install("QFeatures")
+BiocManager::install("Spectra")
+BiocManager::install("ProtGenerics")
+BiocManager::install("PSMatch")
+BiocManager::install("pheatmap")
+BiocManager::install("limma")
+BiocManager::install("MSnID")
+BiocManager::install("rawrr")
+BiocManager::install("RforMassSpectrometry/SpectraVis")
+
+install.packages("tidyverse")
 ```
 
 ## Review some points about MS data
@@ -56,7 +57,7 @@ It is usually expressed in **orders of magnitude (powers of 10)**.
 
 - Mount Damavand: $\sim 5.6 \times 10^{3}$ m  
 - Fruit fly: $\sim 3 \times 10^{-3}$ m  
-- Ratio: $\sim 10^{6}$ (6 orders of magnitude)
+- Ratio: $\sim 10^{6}$ (6 orders of magnitude) (large dynamic range)
 
 ---
 
@@ -70,17 +71,18 @@ It is usually expressed in **orders of magnitude (powers of 10)**.
 | Biological proteome (human plasma) | $\sim 10^{10}$–$10^{12}$ | $\sim 10^{4}$–$10^{5}$ proteins | $\sim 10^{-3}$ to $10^{-15}$ M (mM–fM) | Damavand → sub-viral / molecular scale |
 
 ![](fig_script/Coverage.png){fig-align="center" width=100%}
-
+with proteome being 10^12, and MS only 10^6, we are missing the log10scale -12 to -15.
+ionizer, analyser, detector (3 parts) 
 ### Signal representation in MS
 
 - The continuous workflow of separating-separating-separating!
 
-- Three dimensions: Retention time of analyser elution - Mass to charge (M/Z) - Intensity
+- Three dimensions of data: Retention time of analyser elution - Mass to charge (M/Z) - Intensity
 
 **Spectrum is the unit of mass spectrometry data**
 
 
-*TIC (total ion chromatogram) plot*: The intensities of all ions in each mass spectrometer scan (within a given time period) are summed and plotted as a function of time.
+*TIC (total ion chromatogram) plot*: The intensities of all ions in each mass spectrometer scan (within a given time period) are summed and plotted as a function of time. (TIC should be around E9 or E10. anything lower = insufficient signal)
 *Base peak chromatogram plot*: The intensity of the base peak (the most intense ion in each mass spectrum) is plotted as a function of time (Note that the base peak should not be confused with the baseline, which represents the constant background signal of the instrument).
 *XIC or EIC plot*: The intensity of a specific analyte at a chosen m/z value (either total or base peak intensity) is isolated and plotted as a function of time.
 
@@ -103,7 +105,7 @@ px <- PXDataset("PXD022816")
 pxget(px, grep("mzID", pxfiles(px))[1:3]) # It might take time for the local access  
 pxget(px, grep("mzML", pxfiles(px))[1:3]) # It might take time for the local access 
 
-(px <- PXDataset("PXD000001")) # To remove any dataset from cache use:unlink(px@cachepath, recursive = TRUE) 
+(px <- PXDataset("PXD000001"))
 (pxfiles(px)) # file names of the object
 
 fn <- "TMT_Erwinia_1uLSike_Top10HCD_isol2_45stepped_60min_01-20141210.mzML"
@@ -149,7 +151,10 @@ https://en.wikipedia.org/wiki/Mass_spectrometry_data_format
 >What is the difference between DDA and DIA from a data acquisition perspective?
 
 ![Three dimensions in DDA](fig_script/DDA_example1.png){fig-align="left" width=50%}![Three dimensions in DDA](fig_script/DDA_example2.png){fig-align="rigth" width=50%}
+after fragmentation, you get fragment ions. (sparse one in html is DDA - few ions selected, many fragments).
+around 1 min, have MS1 and some MS2. 
 ![Three dimensions in DIA](fig_script/DIA_example.png){fig-align="center" width=50%}
-
+range of retention time is similar to above. 
+each line is one scan. blue is MS1, orange is MS2.
 
 ![How it looks in R](fig_script/raw.png){fig-align="center"}

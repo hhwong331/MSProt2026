@@ -31,13 +31,13 @@ Visit `gosocrative.com` and enter room name `FIN2026`
 ```
 
 # Toy spectra
-```{r, warning=FALSE, message=FALSE}
+```{r}
 library(S4Vectors)
 library(Spectra)
 ## Let’s create a DataFrame containing MS levels, retention time, m/z and intensities for 2 spectra
 
 ## data.frame
-## tibble
+## tibble #msLevel 1 and 2 are before and after frag
 (spd <- DataFrame(msLevel = c(1L, 2L), #S4-based extension of data.frame from Bioconductor, designed for genomic and biological data with support for complex metadata and attributes.
           rtime = c(1.1, 1.2)))
 
@@ -53,21 +53,22 @@ spd$intensity <- list(
 
 # Convert this generic object to format of Spectra object
 (sp <- Spectra(spd))
+#we have not provided scanIndex yet
 ```
 
 ```{r, include=FALSE, echo=FALSE, eval=FALSE}
 # Exercise: what are these additional spectra variables that are available as part of this dataset?
 spectraVariables(sp)
-spectraData(sp)
-peaksData(sp)[[1]]
+spectraData(sp) #metadata
+peaksData(sp)[[1]] 
 peaksData(sp)[[2]]
-sp[c(1 ,2, 1, 1)]
+sp[c(1 ,2, 1, 1)] 
 ```
 
-## Create the Spectra object from f
+## Create this table from f
 
 ```{r}
-library(rpx)
+library(rpx) #to access repository
 f <- pxget(PXDataset("PXD000001"), 
            "TMT_Erwinia_1uLSike_Top10HCD_isol2_45stepped_60min_01-20141210.mzML")
 (sp <- Spectra(f)) # It retrieves from Hard not memory when it is not manually created spectra (MsBackendMzR), so it takes a little bit of time to retrieve.
@@ -77,7 +78,7 @@ print(object.size(sp), units = "Mb") # Small and not overload memory
 length(sp)
 spectraVariables(sp)
 pd <- peaksData(sp)
-dim(pd[[1345]])
+dim(pd[[1345]]) #to see how many peaks and 2 variables (m/z and intensity)
 head(pd[[1345]])
 
 ?Spectra
@@ -186,7 +187,7 @@ ms_fields %>%
 ```{r}
 #Two ways for a purpose
 head(msLevel(sp), 250)
-#head(sp$msLevel, 250)
+#head(sp$msLevel, 300)
 
 msLevel(sp)[[1234]]
 plot(pd[[1234]], type = "h"); grid()
@@ -194,11 +195,11 @@ plot(pd[[1234]], type = "h"); grid()
 plot(pd[[1234]], type = "h", xlim = c(450, 500)); grid()
 plot(pd[[1234]], type = "l", xlim = c(450, 500)); grid()
 head(pd[[1234]])
-sp$intensity[[1234]] |> summary()
+sp$intensity[[1234]] |> summary() #info of all intensity in this scan number
 
-sp$lowMZ[1234]
+sp$lowMZ[1234] #subset lowest MZ in this scan number
 sp$highMZ[1234]
-head(precursorMz(sp), 500)
+head(precursorMz(sp), 500) #why we have NA? MS1 no precursor so NA. for MS2, they are fragment ions so have precursor ions.
 precursorMz(sp)[1234]
 ```
 
@@ -207,7 +208,7 @@ precursorMz(sp)[1234]
 table(msLevel(sp))
 
 #filter family functions
-(sp2 <- filterMsLevel(sp, 2L))
+(sp2 <- filterMsLevel(sp, 2L)) #use parenthesis so we dont need to define sp2
 #sp[msLevel(sp) == 2L]
 
 max(sp$basePeakIntensity)
@@ -216,24 +217,28 @@ rtime(sp)[1234]
 plotSpectra(sp2[5404]); grid()
 plotSpectra(sp2[1234]); grid()
 plotSpectra(sp2[1230]); grid()
-plotSpectra(sp[226:229]) # MS1 vs. MS2 spectra
+plotSpectra(sp[226:229]) # MS1 vs. MS2 spectra. #201.5 is precursor, the rest are fragment ions from 201.5 #sum of all MS2 spectra intensities should be that peak that they were fragmented from
 plotSpectra(sp[1]); grid()
 plotSpectra(sp[1:4])
 
+
 ```
+### Quiz 2 (GA_5)
+Visit `gosocrative.com` and enter room name `FIN2026`
 
 ## Visulaize the spectra
 ```{r}
 ## The chromatogram can be created by extracting the totIonCurrent (TIC) and rtime variables for all MS1 spectra. 
 ## Lets annotate the spectrum of interest.
 
-plot(rtime(sp), tic(sp), type = "l"); grid()
+
+plot(rtime(sp), tic(sp), type = "l"); grid() #this was whole MS (all MS)
 #plot(sp$rtime, sp$totIonCurrent, type = "l"); grid()
 
 (sp1 <- filterMsLevel(sp, 1L))
-plot(rtime(sp1), tic(sp1), type = "l"); grid(); abline(v = rtime(sp)[2807], col = "red")
+plot(rtime(sp1), tic(sp1), type = "l"); grid(); abline(v = rtime(sp)[2807], col = "red") #this is only showing MS1
 
-MsCoreUtils::formatRt(rtime(sp)[2800:2820]) # Convert to Min:Sec format
+MsCoreUtils::formatRt(rtime(sp)[2800:2820]) # Min:Sec
 
 sp[2807]
 
@@ -247,14 +252,12 @@ spectraData(sp) |>
     filter(msLevel == 1) |>
     ggplot(aes(x = rtime,
                y = totIonCurrent)) +
-    geom_line()
+    geom_line() #make as tibble then easy to use with ggplot
 ```
 
-### Quiz 2 (GA_5)
-Visit `gosocrative.com` and enter room name `FIN2026`
 
 ```{r}
-# The filterPrecursorScan() function can be used to retain a set parent (MS1) and children scans (MS2),
+# The filterPrecursorScan() function can be used to retain a set  parent (MS1) and children scans (MS2),
 # as defined by an acquisition number, Use it to extract the MS1 scan of interest and all its MS2 children.
 
 (sp2 <- filterPrecursorScan(sp, 2807)) # a family of scans
@@ -263,18 +266,52 @@ precScanNum(sp2)
 # Plot the MS1 spectrum of interest and highlight all the peaks that will be selected for MS2 analysis
 # plotSpectra()
 
-plotSpectra(sp2[1], xlim = c(400, 1000)); grid(); abline(v = precursorMz(sp2)[-1], col = "blue")
+plotSpectra(sp2[1], xlim = c(400, 1000)); grid(); abline(v = precursorMz(sp2)[-1], col = "blue") #mark with blue line selected for fragmentation. but usually in DDA, select top 10 with highest intensity.
+#how come in this plot some high intensities are not selected? in addition to intensity, we do not want to fragment repeated ions. these high intensities are fragmented previously so we didnt select them again. if the ions are in high intensity peak, they already selected first time to fragment. second time onwards will skip because we dont want to frag repeated ions again
 
 # Use plotSpectra() function to plot all 10 MS2 spectra in one call.
 plotSpectra(sp2[-1])
 # plotSpectra(sp2[2:11])
 # plotSpectra(filterMsLevel(sp2, 2L))[1]
 ```
- 
+
+```{r Quiz1 q5}
+sp <- Spectra(f)
+sp2 <- filterMsLevel(sp, 2L)
+which.max(sp2$basePeakIntensity) #this is in sp2 (filtered)
+#answer is 5404 
+#asking for scan index
+sp2[4192]
+
+```
+
+```{r quiz2}
+sp_rt <- filterRt(sp, rt = c(1804.27, 1806.27))
+length(sp_rt)   # this answers: "What is the number of scans?"
+
+rt_vals <- rtime(sp_rt)
+idx <- which.min(abs(rt_vals - 1805.27))
+sp_rt1 <- sp2[idx]
+pd <- peaksData(sp_rt1)[[1]]   # matrix with columns: mz, intensity
+mz_vals <- pd[, 1]
+int_vals <- pd[, 2]
+
+mz_vals[which.max(int_vals)] #mz
+
+
+idx2 <- which.max(sp_rt$basePeakIntensity)
+pd2 <- peaksData(sp_rt)[[idx2]]
+mz_vals2 <- pd2[, 1]
+int_vals2 <- pd2[, 2]
+
+mz_vals2[which.max(int_vals2)]
+
+```
+
 ## Focus of mz range
 ```{r}
 plotSpectra(sp[2807], xlim = c(521.2, 522.5)); grid()
-plotSpectra(sp[2807], xlim = c(521.3, 521.35)); grid()
+plotSpectra(sp[2807], xlim = c(521.3, 521.35)); grid() #isotopic and noise for detection. in MS1, the default is to provide profile mode. in MS2, default use centroid mode
 
 ## Processing of MS raw data as `profile mode of spectrum`
 ## that's because there is some uncertainty in all in what is measured by the MS (imperfection of device)
@@ -288,11 +325,11 @@ table(msLevel(sp), centroided(sp))
 
 # Spectra::filter... family functions
 ```
-
 ## More Visulization
 ```{r}
 plotSpectra(sp2[7],
-            xlim = c(126, 132))
+            xlim = c(126, 132)) #in this range, we dont have any peptide for identification, but this range is impt to us because tmt labels
+
 (z <- peaksData(sp2[7])[[1L]])
 z[,"intensity"] |> summary()
 
@@ -316,16 +353,16 @@ sp2 <- filterMsLevel(sp, 2L)
 
 anyDuplicated(precursorMz(sp2))
 
-(i <- which(precursorMz(sp2) == precursorMz(sp2)[37]))
+(i <- which(precursorMz(sp2) == precursorMz(sp2)[37])) #index of repeated
 
-plotSpectra(sp2[i])
+plotSpectra(sp2[i]) #pattern of mz similar but intensity very different
 
-
-plotSpectraMirror(sp2[31], sp2[37]); grid()
+plotSpectraMirror(sp2[31], sp2[37]); grid() #fragmentation are very good, but intensity very different, depends on intensity from first scan
 
 plotSpectraOverlay(sp2[i], col = c("red", "steelblue")); grid()
 
 ```
+
 
 ```{r, include=TRUE,  eval=FALSE}
 # BiocManager::install("RforMassSpectrometry/SpectraVis")
@@ -354,9 +391,9 @@ Spectra(DataFrame(hd))
 ```
 
 ## Fragment Ions
-### 1. Backbone Fragment Ions
+### 1. Backbone Fragment Ions 
 
-When a peptide is fragmented in MS/MS, it breaks along the backbone, producing ions depending on where the charge is retained.
+When a peptide is fragmented in MS/MS, it breaks along the backbone, producing ions depending on where the charge is retained. #better to fragment from backbone because we want to identify amino acid. the aminoacids differ in R groups, so we want to keep R groups intact. = generate desirable ions
 
 #### Main Ion Types
 
@@ -369,9 +406,9 @@ When a peptide is fragmented in MS/MS, it breaks along the backbone, producing i
 | y-ions   | C-terminal fragments  | C → N      |
 | z-ions   | C-terminal (ETD-type) | C → N      |
 
-#### Intuition
+### Intuition
 
-* **b / y ions** → most common (CID/HCD)
+* **b / y ions** → most common (CID/HCD) - exact difference is 2aa, more desirable for us for identifcation
 * **c / z ions** → ETD/ECD fragmentation
 * **a ions** → less abundant (loss of CO from b)
 
@@ -418,16 +455,16 @@ Examples:
 
 ---
 
-### Fragmentation Methods in proteomics
+## Fragmentation Methods in proteomics
 
-#### CID (Collision-Induced Dissociation)
+### CID (Collision-Induced Dissociation)
 
 * Peptides collide with gas molecules
 * Slow heating fragmentation
 
 ---
 
-#### HCD (Higher-energy C-trap Dissociation)
+### HCD (Higher-energy C-trap Dissociation)
 
 * Higher-energy version of CID
 
@@ -435,7 +472,7 @@ Examples:
 
 ---
 
-#### ETD (Electron Transfer Dissociation)
+### ETD (Electron Transfer Dissociation)
 
 * Electron transfer to peptide
 
@@ -443,13 +480,13 @@ Examples:
 
 ---
 
-#### ECD (Electron Capture Dissociation)
+### ECD (Electron Capture Dissociation)
 
 * Similar to ETD (used in FTICR instruments)
 
 ---
 
-#### Hybrid Methods (EThcD)
+### Hybrid Methods (EThcD)
 
 * Combination of ETD and HCD
 
@@ -466,12 +503,21 @@ Examples:
 
 
 ```{r, eval=FALSE}
-#library(PSMatch)
-calculateFragments("TAFDEAIAELDTLNEESYK")
+library(PSMatch)
+calculateFragments("TAFDEAIAELDTLNEESYK") #found 77 fragments. you see number of aminoacids in the frag in seq. e.g. 1 aa, unlikely to be useful. by default, this only give b and y ions (and y*)
 calculateFragments("TAFDEAIAELDTLNEESYK", type=c("a", "b", "c", "x", "y", "z"),
-                   z=1:2)
+                   z=1:2) #out of 19aa of this peptide, generated more fragments now (462)
+
+#Q) how to extract mz of aminoacid A in TA (3rd line)? subtract mz of T? which T?
+
+calculateFragments("HELSINKIFINLAND")
+calculateFragments("HELSINKIFINLAND", type=c("a", "b", "c", "x", "y", "z"),
+                   z=1:2) #z is for charge
+#after z=1:2, add: modification = c(C = 57.02146, Nterm = 229.1629))
+
 ```
 ```{r}
+#install.packages("protViz")
 library("protViz")
 data(msms)
 
@@ -524,18 +570,27 @@ library(tibble)
 as.data.frame(id) |>
     as_tibble() |>
   DT::datatable()
+#experimental and calculated masstocharge difference is due median, sensory mode. and noise to analyze (normally have tolerance about 1-2 Dalton)??
+#isDecoy: many studies dont provide this. very difficult to evaluate the study if you dont know isDecoy
+#we dont want to see many matching between our reading and isDecoy set?
+
 
 ```
 
 ## Decoy set understanding
 ```{r}
+#we upload database library to match our spectra and peptide = Target
 ## Target: protein.fasta -> peptide
 ## Decoy:  reverse protein.fasta -> peptide
 ## One of the benefit of the Reverse peptide set as a decoy set is that the probability of pair of a.a. are same as the target set.
+#because if you provide other random sequence, it may not be compatible with the nature of evolution. 
+#interested to see how many PSM we can match with the real databases compared to random databases, compare
+# number of peptides that match to decoysets let us rate the goodness of our identification, 5% match ok. but if more matching = our identification are not good enough. usually decide based on species. 
 
-table(id$isDecoy)
 
-head(id$DatabaseAccess)
+table(id$isDecoy) #TRUE is 2896 matching decoy. not good identification
+
+head(id$DatabaseAccess) #the XXX_ is our naming here for reverse
 head(id$isDecoy)
 
 library(ggplot2)
@@ -550,7 +605,7 @@ ggplot(df, aes(score, color = type, fill = type)) +
   scale_color_manual(values = c(Decoy = "red", Target = "blue")) +
   scale_fill_manual(values = c(Decoy = "red", Target = "blue")) +
   labs(title = "MS.GF Score Density", x = "Score", y = "Density") +
-  theme_minimal()
+  theme_minimal() #ideally should see target score much much higher than decoy
 ```
 In summary, two key assumptions must be satisfied:
 
@@ -561,14 +616,18 @@ In summary, two key assumptions must be satisfied:
 
 ## Enzyme digestion
 ```{r}
+#big peptide = cannot ionize = cannot analyze
 rTinyPro <-"LAAGKVEDSD" 
+#if (!require("BiocManager", quietly = TRUE))
+#    install.packages("BiocManager")
 
+#BiocManager::install("cleaver")
 library(cleaver)
 cleave(rTinyPro, "trypsin")
 cleavageRanges(rTinyPro, "trypsin")
 cleavageSites(rTinyPro, "trypsin")
 
-cleave(rTinyPro, "trypsin", missedCleavages = 1)
+cleave(rTinyPro, "trypsin", missedCleavages = 1) #normally we put 1 or 2 missedcleavages. more than 2 is quite ambitious for trypsin. maybe still possible for other enzyme
 cleavageRanges(rTinyPro, "trypsin", missedCleavages = 1)
 
 ```
