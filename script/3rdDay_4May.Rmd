@@ -24,6 +24,7 @@ library(mzR)
 library(PSMatch)
 library(pheatmap)
 library(QFeatures)
+#install.packages("sageR")
 library(sageR)
 library(SummarizedExperiment)
 library(factoextra)
@@ -33,16 +34,19 @@ library(factoextra)
 
 ![Data levels](fig_script/ScanToGroup.png)
 
+tricky if one peptide matches to multiple proteins because we assign based on peptide intensity
+we prefer to have several peptides to each protein
+maxquant provide protein group, which give. leading proteins. but does not mean that you only have leading proteins. the system select based on sulphide bond a leading protein.
+we observe spectral, and then we identify proteins
 
 ```{r, eval=FALSE}
 table(id$spectrumID)
 table(table(id$spectrumID))
-table(id$spectrumID == "controllerType=0 controllerNumber=1 scan=1774")
-(i <- which(id$spectrumID == "controllerType=0 controllerNumber=1 scan=1774"))
-
+table(id$spectrumID == "controllerType=0 controllerNumber=1 scan=1774") #in this TRUE=4 means we match to 4 peptides
+(i <- which(id$spectrumID == "controllerType=0 controllerNumber=1 scan=1774")) 
 id[i, ] |>
     as.data.frame() |>
-    DT::datatable()
+    DT::datatable()#databaseaccess different, length different
 
 # If the goal is to keep all the matches, but arranged by scan/spectrum:
 (id2 <- reducePSMs(id, id$spectrumID))
@@ -64,18 +68,18 @@ idtbl <- idtbl |>
 ## - Keep first rank matches
 
 idtbl <- idtbl |>
-    filter(rank == 1)
+    filter(rank == 1) #recommended to keep rank 1 because its the best rank for matching
 
-idtbl
+idtbl #out of 5000+, half of them were matched (now after filter we have 2751)
 ```
 
 ### Removing shared peptides
 
 ```{r, results='show', eval=FALSE}
 ## Ex3- Start by identifying scans that match different proteins. For example scan 4884 matches proteins XXX_ECA3406 and ECA3415. Scan 4099 match XXX_ECA4416_1, XXX_ECA4416_2 and XXX_ECA4416_3. Then remove the scans that match any of these proteins.
-dplyr::count(idtbl, spectrumID)
+dplyr::count(idtbl, spectrumID) #most are only matched to 1 peptide. some matches to more than 1 peptides
 
-dplyr::count(idtbl, spectrumID) |> 
+dplyr::count(idtbl, spectrumID) |> #so we filter 
   filter(n >1)
 
 (mltm <- dplyr::count(idtbl, spectrumID) |> 
@@ -90,32 +94,32 @@ idf <- filterPSMs(id)
 idf <- id |>
     filterPsmDecoy() |>
     filterPsmRank()
-idf
+idf #2751 matching to target set with rank1 (and non-decoy)
 ```
 
 ## Combining spectral data with ID results
 
 ```{r, eval=FALSE}
-library(Spectra)
+library(Spectra) #we want to combine 2 dataframe: mzID and mzR
 
-sp <- Spectra(f)
+sp <- Spectra(f) #provide spectral library
 spectraVariables(sp)
 
 head(sp$spectrumId)
-length(sp)
-table(msLevel(sp))
+length(sp) #we have 7534 spectra but the matching ones is only 3000+ so we have 4000+ we were unable to match
+table(msLevel(sp)) #from 1431 in MS1 we couldnt do identification
 
 idf <- filterPSMs(id)
 names(idf)
 
-head(idf$spectrumID)
-table(table(idf$spectrumID))
+head(idf$spectrumID) #this is similar to head(sp$spectrumId) means we have a common column that allows us to combine them and access the spectra
+table(table(idf$spectrumID)) #2630 spectra to 1 peptide, 13 spectra to 2 peptides, etc.
 which(table(idf$spectrumID) == 4)
 
 idf[idf$spectrumID == "controllerType=0 controllerNumber=1 scan=5490", ] |>
     as.data.frame() 
 
-(idf <- reducePSMs(idf, idf$spectrumID))
+(idf <- reducePSMs(idf, idf$spectrumID)) #the only diff is the location of the modification. it has a fragment ion which matches to 2nd aa, 5th, 10th and 15th aa. 
 ```
 
 ```{r, eval=FALSE}
@@ -126,8 +130,8 @@ spid <- joinSpectraData(sp, idf,
 spectraVariables(spid)
 
 # Consider we match peptide sequence for MS2 scans
-all(is.na(filterMsLevel(spid, 1L)$sequence)) # No sequence match for MS1 level
-table(is.na(filterMsLevel(spid, 2L)$sequence)) # Some of MS2 level can match to a sequence
+all(is.na(filterMsLevel(spid, 1L)$sequence)) # No sequence match for MS1 level. because identification is based on MS2!
+table(is.na(filterMsLevel(spid, 2L)$sequence)) # Some of MS2 level can match to a sequence #TRUE=3457 MS2 scans cannot be matched to any peptide
 ```
 
 ## Visualise MS2 scans
@@ -141,11 +145,11 @@ i <- which(spid$MS.GF.RawScore > 100)[1]
 plotSpectra(spid[i]); grid()
 
 spid[i]$sequence
-PSMatch::calculateFragments("THSQEEMQHMQR")
-mz(spid[i])[[1]]
+PSMatch::calculateFragments("THSQEEMQHMQR") #theoretically, we can have 58 fragments from this peptide (df 58 x 7)
+mz(spid[i])[[1]] #some of these values can match to theoretical fragments then we can match for identification
 ```
 
-```{r}
+```{r just to add function}
 addFragments <- function(spectrum, tolerance = 0.01) {
   seq <- spectrum$sequence
   
@@ -201,18 +205,19 @@ addFragments <- function(spectrum, tolerance = 0.01) {
 
 ```{r, eval=FALSE}
 (pdi <- data.frame(peaksData(spid[i])[[1]]))
-pdi$label <- addFragments(spid[i])
+pdi$label <- addFragments(spid[i]) #add label to fragments: we have b1,b2,b3,b4,b5,b6 (consecutive in a row, we can identify the b ions for this peptide = a good matching)
 pdi
 plotSpectra(spid[i], labels = addFragments,
             labelCol = "steelblue",
             labelPos = 3); grid()
+#having some peaks (even may have high intensity) but they do not match to theoretical, why? because of background noise (see text below)
 ```
 
 Non-identified peaks in fragment spectra:
 
 - Background noise, low intensity 
 
-- High intensity in the left part of the spectra might relate to TMT molecules 
+- High intensity in the left part of the spectra might relate to TMT molecules #TMT fragments (different labels of TMT)
 
 - High intensity of un-fragmented precursor ion 
 
@@ -225,7 +230,7 @@ filter(pdi,
     arrange(intensity)
 
 spid[i] |>
-    filterIntensity(500) |> # check 500 and 100
+    filterIntensity(500) |> #check 500 and 1000 #filtering out low intensity. 
     plotSpectra(labels = addFragments,
                 labelCol = "steelblue",
                 labelPos = 3); grid()
@@ -239,7 +244,10 @@ spectraVariables(spid) # to check if `countIdentifications` was added
 # To see the number of identification based on MS levels
 table(msLevel(spid))
 table(msLevel(spid),
-      spid$countIdentifications)
+      spid$countIdentifications) #we can find how many precursor ions fragmented and then identified.
+#we can see 833 from MS1 aint used for identification after fragmentation. there were 1400+ fragmented so 1400-833=600+ used for identification
+#2646 used in MS2 for identification
+
 # now focus on MS1 scans
 spid |>
     filterMsLevel(1) |>
@@ -252,7 +260,7 @@ spid |>
                        ifelse(countIdentifications == 0, # Each dot represent MS1 scan
                               NA, countIdentifications)),
                size = 2) +
-    labs(colour = "Number of ids")
+    labs(colour = "Number of ids") #TIC is like dotplots. but we visualize as line plot. if there is an identification, we use the dots to know. those below 1000 rtime no identification because no ions. and above 3000 a lot of grey dots (no id too). mostly in center
 ```
 ### Quiz 2 (GA_7)
 
@@ -271,7 +279,14 @@ All quantification in Omics technology is relative quantitative not absolute.
 -   XIC (Extracted Ion Chromatogram): Intensity of each specific peptide (m/z, precursor) over time (e.g., MaxQuant, XCMS)
 -   Labelled TMT benefit: Good to remove technical variability since it would be shared
 ![TMT](fig_script/TMT.png)
+difference between TIC: sum of all ions, XIC: you ?????
+to quantify MS1 label-free, you just need to use XIC??
 
+in MS2: in a specific window of running time, we send everything in DIA to collision cell (so its fragment XIC), whereas in DDA, we select specific to send to collision cell so only need to count
+
+Basic of TMT:
+isobaric tag: has 3 parts - reporter, normalize part, and reactive tag. only reporter part will fragment. 
+if they have identical m/z, then we only have 1 peak. but since we have reporter, after fragment, the reporter will fragment differently, so we see multiple peaks in MS2 (we have identification info based on b and y ions) and quantification(just consider intensity to each ion- we quantify the reporter part)
 ### Quantitative assay
 
 What we need to quantify? (First level)
@@ -282,6 +297,7 @@ What we need to quantify? (First level)
 -   features/rows annotation (meta-data)
 
 ![](fig_script/SE.png)
+rows: diff proteins, columns: conditions. matrix related to intensity
 
 SummarizedExperiment object
 
@@ -291,6 +307,7 @@ SummarizedExperiment object
 
 Second level is aggregating low-level QF into higher level QF data. We can start with QF file and after quantification, you find an interesting protein and you see only one peptide was used to identify that protein and then only one PSM was related to that peptide, then checking the quality of that PSM would be important.
 ![Aggregation](fig_script/featuresplot-1.png)
+QFeatures object connect all these summarizedExperiments together (aggregation)
 
 ## Toy QFeatures object
 ```{r}
@@ -301,7 +318,7 @@ feat1
 feat1[["psms"]]
 assay(se)
 rowData(se)
-colData(se)
+colData(se) #col is 0 (empty)
 colData(feat1) #QF object
 colData(feat1)$X <- c("X1", "X2")
 feat1$Y <- c("Y1", "Y2")
@@ -321,13 +338,13 @@ rowData(feat1[[1]])
 assay(feat1[[1]])
 assay(feat1[[2]])
 # Compare what happened after aggregation of data
-rowData(feat1[[2]])
+rowData(feat1[[2]]) #.n column = how many speectra was used
 rowData(feat1[[1]])
 ```
 If you directly use the output of MaxQuant, PD or sage, you do not need the following BUT you will miss the **smart** filtering of data
-
+we want info at the level of PSM in capstone projecr! how we decide to aggregate, and at each level what is the difference
 ```{r}
-
+#the toydataset only has 1 protein. all 3 peptides related to this 1 prot.
 (feat1 <- aggregateFeatures(
     feat1,
     i = "peptides",
@@ -350,17 +367,17 @@ filterFeatures(feat1, ~ location == "Mitochondrion")
 ```{r, eval=FALSE}
 # `QFeatures` object remembers the relation between`SummerizedExperiment` object
 ## data generated by PD similar to any csv output of third-party software
-data(hlpsms)
+data(hlpsms)#excel file from core facilities contain info about prot, diff enrichment etc. but impt to receive on PSM level so you can do all these. 
 class(hlpsms)
-head(hlpsms)
+head(hlpsms) #column name similar to tmt tags, first 11 columns related to values, 
 
 (hl <- readQFeatures(hlpsms,
                     ecol = 1:10,
                     name = "psms")
-)
+) #10 columns = they used 10 TMT labels
 assay(hl[[1]])
-rowData(hl[[1]])
-colData(hl)
+rowData(hl[[1]]) 
+colData(hl) #original excel doesnt have this info, we will need to define it manually or extract
 
 colData(hl)$group <- rep(c("CTRL", "COND"),
                          each = 5)
@@ -394,7 +411,7 @@ read.delim(f) |>
   data.frame() |> 
   head()
    
-names(read.delim(f))
+names(read.delim(f)) #56-61 are the intensity 6x_y
 i <- 56:61
 #i <- grep("Intensity\\.", names(read.delim(f)))
 
@@ -403,7 +420,14 @@ i <- 56:61
                                      fname = "Sequence",
                                      sep = "\t")
 )
-colData(cptac_se)
+colData(cptac_se) #6 col related to the mixture of human and yeast
+#quantCols <- grep("^Intensity", names(read.delim(f, nrows = 1)))
+#dfextract <- read.delim(f)
+quantCols <- grep("Intensity", names(dfextract))
+quantCols
+
+assaytemp <- dfextract[, c("Sequence", quantCols)]
+
 ## Contaminant database/fasta: CRAP, you can downlaod it
 ```
 
@@ -442,6 +466,12 @@ Missing values (MVs) are **unavoidable** in mass spectrometry (MS) data due to t
 
 > **Pro tip:** Always document your MV handling strategy as it significantly impacts differential analysis and statistical power.
 
+missing values in MS data is unavoidable, andnormally imputation is used. not random imputation, have logic. 2 diff missing values - missing value at random and missing value not at random
+origin of missing value different: if random, we shouldnt change distribution of data when impute. 
+if not random, not related to biology, then not impt to consider whole distribution. 
+we need to have values, imputation impt (PCA etc cannot work with NA values)
+DIA less missing values than DDA
+missing vol can come from ion-competition (co-elution): high abundant ion cover low abundant one
 
 ```{r, eval=FALSE}
 assay(cptac_se)
@@ -501,7 +531,7 @@ cptac
 
 ## Using the `filterFeatures()` function, filter out the reverse and contaminant hits, and also retain those that have a posterior error probability smaller than 0.05.
 table(rowData(cptac_se)$Reverse)
-table(rowData(cptac_se)$Potential.contaminant)
+table(rowData(cptac_se)$Potential.contaminant) #TRYPSIN IS AlSO A POTENTIAL CONTAMINANT
 
 (ctpac <- cptac |>
     filterFeatures(~ Reverse != "+") |>
@@ -527,11 +557,11 @@ cptac <-
                       fun = colMedians,
                       na.rm = TRUE)
 
-table(rowData(cptac[[4]])$.n)
+table(rowData(cptac[[4]])$.n) #cptac[[4]] = prot. this is trying to see how many prot identified by n peptide (.n). 339 proteins are identified only by 1 peptide. preferred to rely on more than 1 peptide. 
 
 limma::plotDensities(assay(cptac[["peptides"]]))
 limma::plotDensities(assay(cptac[["log_peptides"]]))
-limma::plotDensities(assay(cptac[["lognorm_peptides"]]))
+limma::plotDensities(assay(cptac[["lognorm_peptides"]])) #after normalization median at 0 and values are from 0
 ```
 
 ```{r, eval=FALSE}
@@ -561,7 +591,7 @@ ggsave("fig_script/cptac_plot.png", p, width = 8, height = 5, dpi = 300)
 ![](fig_script/cptac_plot.png)
 
 ```{r}
-plot(cptac)
+plot(cptac) #after log_peptides, split and use both lognorm and logquantile peptides
 normalize(cptac, "log_peptides",
           name = "logquantiles_peptides",
           method = "quantiles") |>
